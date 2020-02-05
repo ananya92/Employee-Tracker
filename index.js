@@ -2,6 +2,9 @@ const cTable = require(`console.table`);
 const mysql = require(`mysql`);
 const inquirer = require(`inquirer`);
 
+const selectQuery = `SELECT e1.id AS Employee_ID, e1.first_name AS First_Name, e1.last_name AS Last_Name, r.title AS Role, d.name AS Department, r.salary as Salary, concat(e2.first_name,' ', e2.last_name) AS Manager FROM employee e1 INNER JOIN role r ON e1.role_id = r.id INNER JOIN department d ON r.department_id = d.id LEFT JOIN employee e2 ON e1.manager_id = e2.id`;
+
+require('events').EventEmitter.defaultMaxListeners = 25;
 //Creating MYSQL connection
 var connection = mysql.createConnection({
     host: "localhost",
@@ -19,7 +22,7 @@ connection.connect(function(err) {
 
 function start() {
     //Home page menu
-    inquirer.prompt([
+    return inquirer.prompt([
         {
             type: "list",
             message: "What do you want to do?",
@@ -27,83 +30,118 @@ function start() {
             choices: ["View all Employees",
                     "View all Employees by Department",
                     "View all Employees by Manager",
-                    "Add Employee",
-                    "Remove Employee",
+                    "Add new Employee, Role or department",
+                    "Remove Employee, Role or department",
                     "Update Employee Role",
                     "Update Employee Manager",
                     "View all Roles",
-                    "Add Role",
-                    "Remove Role",
                     "View all Departments",
-                    "Add Department",
-                    "Remove Department",
-                    "View department budget"
+                    "View department budget",
+                    "Exit"
                     ]
         }
     ]).then(function(data) {
-        //Passing the selected choice to the selectedPrompt()
-        selectedPrompt(data.choice);
-    });
-}
-function selectedPrompt(choice) {
-    switch(choice) {
-        case "View all Employees":
-            viewAllEmployees();
-            break;
-        case "View all Employees by Department":
-            break;
-        case "View all Employees by Manager":
-            break;
-        case "Add Employee":
-            break;
-        case "Remove Employee":
-            break;
-        case "Update Employee Role":
-            break;
-        case "Update Employee Manager":
-            break;
-        case "View all Roles":
-            break;
-        case "Add Role":
-            break;
-        case "Remove Role":
-            break;  
-        case "View all Departments":
-            break;
-        case "Add Department":
-            break;
-        case "Remove Department":
-            break;
-        case "View department budget":
-            break;
-        default: break;
-    }
-}    
- function exitMenu() {
-    inquirer.prompt([
-        {
-            type: "list",
-            message: "Select option:",
-            name: "choice",
-            choices: ["View Main Menu", "Exit"]
-        }
-    ]).then(function(data) {
         switch(data.choice) {
-            case "View Main Menu": 
-                start();
+            case "View all Employees":
+                viewAllEmployees();
+                break;
+            case "View all Employees by Department":
+                viewEmployeesByDepartment();
+                break;
+            case "View all Employees by Manager":
+                viewEmployeesByManager();
+                break;
+            case "Add new Employee, Role or department":
+                break;
+            case "Remove Employee, Role or department":
+                break;
+            case "Update Employee Role":
+                break;
+            case "Update Employee Manager":
+                break;
+            case "View all Roles":
+                break;
+            case "View all Departments":
+                break;
+            case "View department budget":
                 break;
             case "Exit":
-            default:
+            default: 
                 connection.end();
                 break;
         }
     });
- }
- 
+}
+
+ //Function to view information about all employees
 function viewAllEmployees() {
-    connection.query("SELECT e1.id AS ID, e1.first_name AS First_Name, e1.last_name AS Last_Name, r.title AS Role, d.name AS Department, r.salary as Salary, concat(e2.first_name,' ', e2.last_name) AS Manager FROM employee e1 INNER JOIN role r ON e1.role_id = r.id INNER JOIN department d ON r.department_id = d.id LEFT JOIN employee e2 ON e1.manager_id = e2.id", function(err, result) {
+    connection.query(selectQuery, function(err, result) {
         if(err) throw err;
         console.table("\nPrinting all employees:", result);
-        exitMenu();
+        //Calling the Exit Menu
+        return start();
+    });
+}
+
+//Function to view information about employees in a given department
+function viewEmployeesByDepartment() {
+    //SQL query to select all department names
+    connection.query("SELECT name FROM department", function(err, result) {
+        if(err) throw err;
+        //Give choice to user to select a department
+        return inquirer.prompt([
+            {
+                type: "list",
+                name: "choice",
+                message: "Choose department:",
+                choices: result
+            }
+        ]).then(function(data) {
+            //SQL query to list all employees in the chosen department
+            connection.query(`${selectQuery} WHERE d.name = ?`,[data.choice], function(err, res) {
+                if(err) throw err;
+                if(res.length === 0) {
+                    console.log("\nNo records available!\n");
+                }
+                else {
+                    console.table(`\nPrinting all employees in ${data.choice} department:`, res);
+                }
+                return start();
+            });
+        });
+    });
+}
+
+//Function to view information about employees under a given manager
+function viewEmployeesByManager() {
+    //SQL query to select all manager names
+    connection.query("SELECT concat(e2.first_name,' ', e2.last_name) as manager FROM employee e1 JOIN employee e2 ON e1.manager_id = e2.id", function(err, result) {
+        if(err) throw err;
+        var res=[];
+        result.forEach(element => {
+            console.log(element.manager);
+            res.push(element.manager);
+        });
+        //Give choice to user to select the manager
+        return inquirer.prompt([
+            {
+                type: "list",
+                name: "choice",
+                message: "Choose manager:",
+                choices: res
+            }
+        ]).then(function(data) {
+            //SQL query to get all employees under the chosen manager
+            connection.query(`${selectQuery} WHERE concat(e2.first_name,' ', e2.last_name) = ?`,[data.choice], function(err, res) {
+                if(err) throw err;
+                if(res.length === 0) {
+                    console.log("\nNo records available!\n");
+                }
+                else {
+                    console.table(`\nPrinting all employees under ${data.choice}:`, res);
+                }
+                return start();
+            });
+        });
     });
 }
