@@ -42,12 +42,13 @@ function start() {
         }
     ]).then(function(data) {
         //Passing the selected choice to the selectedPrompt()
-        selectedPrompt(data.name);
+        selectedPrompt(data.choice);
     });
 }
 function selectedPrompt(choice) {
     switch(choice) {
         case "View all Employees":
+            viewAllEmployees();
             break;
         case "View all Employees by Department":
             break;
@@ -77,7 +78,11 @@ function selectedPrompt(choice) {
             break;
         default: break;
     }
-    connection.end();
-}    
+}
 
-
+function viewAllEmployees() {
+    connection.query("SELECT e1.id AS ID, e1.first_name AS First_Name, e1.last_name AS Last_Name, r.title AS Role, d.name AS Department, r.salary as Salary, concat(e2.first_name,' ', e2.last_name) AS Manager FROM employee e1 INNER JOIN role r ON e1.role_id = r.id INNER JOIN department d ON r.department_id = d.id LEFT JOIN employee e2 ON e1.manager_id = e2.id", function(err, result) {
+        if(err) throw err;
+        console.table("\nPrinting all employees:", result);
+    });
+}
