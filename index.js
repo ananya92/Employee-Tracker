@@ -61,6 +61,7 @@ function start() {
                 add();
                 break;
             case "Remove Employee, Role or department":
+                remove()
                 break;
             case "Update Employee Role":
                 break;
@@ -268,6 +269,25 @@ function addRole() {
                 console.log(`\n ${result.affectedRows} Role added successfully!\n`);
                 start();
             });
+        });
+    });
+}
+
+//Function to add new department
+function addDepartment() {
+    //Reading new department's details
+    return inquirer.prompt([
+        {
+            type: "input",
+            message: "Enter department name:",
+            name: "name"
+        }
+    ]).then(function(data) {
+        //SQL INSERT query to add new department
+        connection.query("INSERT INTO department(name) VALUES(?)", [data.name], function(err, result) {
+            if(err) throw err;
+            console.log(`\n ${result.affectedRows} Department added successfully!\n`);
+            start();
         });
     });
 }
