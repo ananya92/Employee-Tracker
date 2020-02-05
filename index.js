@@ -4,10 +4,10 @@ const inquirer = require(`inquirer`);
 
 const selectQuery = `SELECT e1.id AS Employee_ID, e1.first_name AS First_Name, e1.last_name AS Last_Name, r.title AS Role, d.name AS Department, r.salary as Salary, concat(e2.first_name,' ', e2.last_name) AS Manager FROM employee e1 INNER JOIN role r ON e1.role_id = r.id INNER JOIN department d ON r.department_id = d.id LEFT JOIN employee e2 ON e1.manager_id = e2.id`;
 
-const selManagersQuery = `SELECT concat(e2.first_name,' ', e2.last_name) as manager FROM employee e1 JOIN employee e2 ON e1.manager_id = e2.id`;
+const selManagersQuery = `SELECT concat(e2.first_name,' ', e2.last_name) as manager FROM employee e1 JOIN employee e2 ON e1.manager_id = e2.id group by manager`;
 
 const insertEmpQuery1 = `INSERT into employee(first_name, last_name, role_id) values(?,?,(SELECT id FROM role WHERE title = ?))`;
-const insertEmpQuery2 = `INSERT into employee(first_name, last_name, role_id, manager_id) values(?,?,(SELECT id FROM role WHERE title = ?),(SELECT id FROM employee WHERE concat(first_name,' ', last_name) = ?))`;
+const insertEmpQuery2 = `INSERT into employee(first_name, last_name, role_id, manager_id) values(?,?,(SELECT id FROM role WHERE title = ?),?)`;
 const insertRoleQuery = `INSERT INTO role(title, salary, department_id) VALUES(?, ?, (SELECT id FROM department WHERE name = ?))`;
 
 require('events').EventEmitter.defaultMaxListeners = 25;
@@ -225,21 +225,31 @@ function addEmployee() {
                 if(data.manager == "None") {
                     params = [data.first_name, data.last_name, data.role];
                     query = insertEmpQuery1;
+                    //SQL INSERT query to add new employee
+                    connection.query(query,params, function(err, result) {
+                        if(err) throw err;
+                        console.log(`\n ${result.affectedRows} Employee added successfully!\n`);
+                        start();
+                    });
                 }
                 else {
-                    params = [data.first_name, data.last_name, data.role, data.manager]
-                    query = insertEmpQuery2;
+                connection.query("SELECT id FROM employee WHERE concat(first_name,' ', last_name) = ?", data.manager, function(err, res) {
+                        if(err) throw err;
+                        params = [data.first_name, data.last_name, data.role, res[0].id];
+                        query = insertEmpQuery2;
+                        //SQL INSERT query to add new employee
+                        connection.query(query,params, function(err, result) {
+                            if(err) throw err;
+                            console.log(`\n ${result.affectedRows} Employee added successfully!\n`);
+                            start();
+                        });
+                    });
                 }
-                //SQL INSERT query to add new employee
-                connection.query(query,params, function(err, result) {
-                    if(err) throw err;
-                    console.log(`\n ${result.affectedRows} Employee added successfully!\n`);
-                    start();
-                });
             });
         });
     });
 }
+
 //Function to add new role
 function addRole() {
     //SQL query to fetch all department names
@@ -288,6 +298,60 @@ function addDepartment() {
             if(err) throw err;
             console.log(`\n ${result.affectedRows} Department added successfully!\n`);
             start();
+        });
+    });
+}
+
+//Function to remove Employee, Role or Department
+function remove() {
+    return inquirer.prompt([
+        {
+            type: "list",
+            name: "choice",
+            message: "What do you want to remove?:",
+            choices: ["Employee", "Role", "Department"]
+        }
+    ]).then(function(data) {
+        switch(data.choice) {
+            case "Employee":
+                removeEmployee();
+                break;
+            case "Role":
+                removeRole();
+                break;
+            case "Department":
+                removeDepartment();
+                break;
+            default: break;
+        }
+    });
+}
+
+//Function to remove employee
+function removeEmployee() {
+    //SQL query to fetch all employee names
+    connection.query("SELECT concat(first_name,' ', last_name) as name FROM employee", function(err, result) {
+        if(err) throw err;
+        var employees = [];
+        result.forEach(element => {
+            employees.push(element.name);
+        });
+        //Reading new department's details
+        return inquirer.prompt([
+            {
+                type: "list",
+                message: "Select employee to remove:",
+                name: "choice",
+                choices: employees
+            }
+        ]).then(function(data) {
+            //SQL INSERT query to add new department
+            var nameArr = data.choice.split(" ");
+            connection.query("DELETE FROM employee WHERE ? = first_name && ? = last_name" ,[nameArr[0], nameArr[1]], function(err, result) {
+                if(err) throw err;
+                console.log(`\n ${result.affectedRows} Employee deleted successfully!\n`);
+                start();
+            });
         });
     });
 }
