@@ -8,6 +8,7 @@ const selManagersQuery = `SELECT concat(e2.first_name,' ', e2.last_name) as mana
 
 const insertEmpQuery1 = `INSERT into employee(first_name, last_name, role_id) values(?,?,(SELECT id FROM role WHERE title = ?))`;
 const insertEmpQuery2 = `INSERT into employee(first_name, last_name, role_id, manager_id) values(?,?,(SELECT id FROM role WHERE title = ?),(SELECT id FROM employee WHERE concat(first_name,' ', last_name) = ?))`;
+const insertRoleQuery = `INSERT INTO role(title, salary, department_id) VALUES(?, ?, (SELECT id FROM department WHERE name = ?))`;
 
 require('events').EventEmitter.defaultMaxListeners = 25;
 //Creating MYSQL connection
@@ -234,6 +235,38 @@ function addEmployee() {
                     console.log(`\n ${result.affectedRows} Employee added successfully!\n`);
                     start();
                 });
+            });
+        });
+    });
+}
+//Function to add new role
+function addRole() {
+    //SQL query to fetch all department names
+    connection.query("SELECT name FROM department", function(err, result) {
+        //Reading new role's details
+        return inquirer.prompt([
+            {
+                type: "input",
+                message: "Enter role title:",
+                name: "title"
+            },
+            {
+                type: "input",
+                message: "Enter salary:",
+                name: "salary"
+            },
+            {
+                type: "list",
+                message: "Choose department:",
+                name: "department",
+                choices: result
+            }
+        ]).then(function(data) {
+            //SQL INSERT query to add new role
+            connection.query(insertRoleQuery, [data.title, data.salary, data.department], function(err, result) {
+                if(err) throw err;
+                console.log(`\n ${result.affectedRows} Role added successfully!\n`);
+                start();
             });
         });
     });
