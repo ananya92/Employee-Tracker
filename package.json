@@ -1,0 +1,24 @@
+{
+  "name": "employee-tracker",
+  "version": "1.0.0",
+  "description": "CLI tool for managing employee data",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ananya92/Employee-Tracker.git"
+  },
+  "author": "Ananya Pramanik",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ananya92/Employee-Tracker/issues"
+  },
+  "homepage": "https://github.com/ananya92/Employee-Tracker#readme",
+  "dependencies": {
+    "console.table": "^0.10.0",
+    "inquirer": "^7.0.4",
+    "mysql": "^2.18.1"
+  }
+}
