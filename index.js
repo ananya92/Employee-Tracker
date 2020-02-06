@@ -182,8 +182,8 @@ function addEmployee() {
     //SQL query to fetch all employee roles
     connection.query("SELECT title FROM role", function(err, result1) {
         if(err) throw err;
-        //SQL query to fetch all Manager names
-        connection.query(selManagersQuery, function(err, result2) {
+        //SQL query to fetch all employee names
+        connection.query(`SELECT concat(first_name,' ', last_name) as manager FROM employee`, function(err, result2) {
             if(err) throw err;
             var managers=[], roles=[];
             result1.forEach(element => {
@@ -254,6 +254,7 @@ function addEmployee() {
 function addRole() {
     //SQL query to fetch all department names
     connection.query("SELECT name FROM department", function(err, result) {
+        if(err) throw err;
         //Reading new role's details
         return inquirer.prompt([
             {
@@ -381,17 +382,53 @@ function removeRole() {
                 name: "confirm"
             }]).then(function(data2) {
                 if(data2.confirm) {
-                    //SQL DELETE query to delete all employees in the selected role from employee table
-                    connection.query("DELETE FROM employee WHERE role_id = (SELECT id from role where title = ?)" ,[data.choice], function(err, result1) {
+                    //SQL DELETE query to delete the selected role from role table
+                    connection.query("DELETE FROM role WHERE title = ?" ,[data.choice], function(err, result2) {
                         if(err) throw err;
-                        console.log(`\n ${result1.affectedRows} Employee deleted successfully!\n`);
-                        //SQL DELETE query to delete the selected role from role table
-                        connection.query("DELETE FROM role WHERE title = ?" ,[data.choice], function(err, result2) {
-                            if(err) throw err;
-                            console.log(`\n ${result2.affectedRows} Role deleted successfully!\n`);
-                            start();
-                        });
+                        console.log(`\n ${result2.affectedRows} Role deleted successfully!\n`);
+                        start();
                     });
+                }
+                else {
+                    //Loading the main menu again if user doesn't want to delete role
+                    start();
+                }
+            })
+        });
+    });
+}
+
+//Function to remove department
+function removeDepartment() {
+    //SQL query to fetch all departments
+    connection.query("SELECT name FROM department", function(err, result) {
+        if(err) throw err;
+        //Giving choice to user to select department to delete
+        return inquirer.prompt([
+            {
+                type: "list",
+                message: "Select department to remove:",
+                name: "choice",
+                choices: result
+            }
+        ]).then(function(data) {
+            //Confirming deletion of department as it would delete all roles and employees of that department as well
+            inquirer.prompt([{
+                type: "confirm",
+                message: `Deleting ${data.choice} department will also remove all roles and employees in this department. Do you want to proceed?`,
+                name: "confirm"
+            }]).then(function(data2) {
+                if(data2.confirm) {
+                    //SQL DELETE query to delete the department from department table
+                    connection.query("DELETE FROM department WHERE name = ?" ,[data.choice], function(err, result3) {
+                        if(err) throw err;
+                        console.log(`\n ${result3.affectedRows} department deleted successfully.\n`);
+                        start();
+                    });
+                }
+                else {
+                    //Loading the main menu again if user doesn't want to delete department
+                    start();
                 }
             })
         });

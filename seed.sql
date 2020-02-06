@@ -21,3 +21,6 @@ insert into employee(first_name, last_name, role_id) values("Ananya", "Pramanik"
 (select id from role where title="Software Developer"));
 insert into employee(first_name, last_name, role_id) values("Piyush", "Gupta",
 (select id from role where title="Accountant"));
+insert into employee(first_name, last_name, role_id) values("Ankit", "Sharma",
+(select id from role where title="Accountant"));
+
