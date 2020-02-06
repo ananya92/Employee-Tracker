@@ -64,6 +64,7 @@ function start() {
                 remove()
                 break;
             case "Update Employee Role":
+                updateEmpRole();
                 break;
             case "Update Employee Manager":
                 break;
@@ -373,27 +374,25 @@ function removeRole() {
                 message: "Select role to remove:",
                 name: "choice",
                 choices: roles
-            }
-        ]).then(function(data) {
-            //Confirming deletion of role as it would delete all employees of that role as well
-            inquirer.prompt([{
+            },
+            {//Confirming deletion of role as it would delete all employees of that role as well
                 type: "confirm",
-                message: `Deleting ${data.choice} role will also remove all employees in this role. Do you want to proceed?`,
+                message: `Deleting role will also remove all employees in this role. Do you want to proceed?`,
                 name: "confirm"
-            }]).then(function(data2) {
-                if(data2.confirm) {
-                    //SQL DELETE query to delete the selected role from role table
-                    connection.query("DELETE FROM role WHERE title = ?" ,[data.choice], function(err, result2) {
-                        if(err) throw err;
-                        console.log(`\n ${result2.affectedRows} Role deleted successfully!\n`);
-                        start();
-                    });
-                }
-                else {
-                    //Loading the main menu again if user doesn't want to delete role
+            }
+        ]).then(function(data) { 
+            if(data.confirm) {
+                //SQL DELETE query to delete the selected role from role table
+                connection.query("DELETE FROM role WHERE title = ?" ,[data.choice], function(err, result) {
+                    if(err) throw err;
+                    console.log(`\n ${result.affectedRows} Role deleted successfully!\n`);
                     start();
-                }
-            })
+                });
+            }
+            else {
+                //Loading the main menu again if user doesn't want to delete role
+                start();
+            }
         });
     });
 }
@@ -410,27 +409,66 @@ function removeDepartment() {
                 message: "Select department to remove:",
                 name: "choice",
                 choices: result
+            },
+            {//Confirming deletion of department as it would delete all roles and employees of that department as well
+                type: "confirm",
+                message: `Deleting department will also remove all roles and employees in this department. Do you want to proceed?`,
+                name: "confirm"
             }
         ]).then(function(data) {
-            //Confirming deletion of department as it would delete all roles and employees of that department as well
-            inquirer.prompt([{
-                type: "confirm",
-                message: `Deleting ${data.choice} department will also remove all roles and employees in this department. Do you want to proceed?`,
-                name: "confirm"
-            }]).then(function(data2) {
-                if(data2.confirm) {
-                    //SQL DELETE query to delete the department from department table
-                    connection.query("DELETE FROM department WHERE name = ?" ,[data.choice], function(err, result3) {
-                        if(err) throw err;
-                        console.log(`\n ${result3.affectedRows} department deleted successfully.\n`);
-                        start();
-                    });
-                }
-                else {
-                    //Loading the main menu again if user doesn't want to delete department
+            if(data.confirm) {
+                //SQL DELETE query to delete the department from department table
+                connection.query("DELETE FROM department WHERE name = ?" ,[data.choice], function(err, result3) {
+                    if(err) throw err;
+                    console.log(`\n ${result3.affectedRows} department deleted successfully.\n`);
                     start();
+                });
+            }
+            else {
+                //Loading the main menu again if user doesn't want to delete department
+                start();
+            }
+        });
+    });
+}
+
+//Function to update the role of an employee
+function updateEmpRole() {
+    //SQL query to fetch all employee roles
+    connection.query("SELECT title FROM role", function(err, result1) {
+        if(err) throw err;
+        //SQL query to fetch all employee names
+        connection.query(`SELECT concat(first_name,' ', last_name) as name FROM employee`, function(err, result2) {
+            if(err) throw err;
+            var names=[], roles=[];
+            result1.forEach(element => {
+                roles.push(element.title);
+            });
+            result2.forEach(element => {
+                names.push(element.name);
+            });
+            //Giving choice to user to select employee who's role they want to update
+            inquirer.prompt([
+                {
+                    type: "list",
+                    message: "Select employee who's role you want to update:",
+                    name: "emp",
+                    choices: names
+                },
+                {
+                    type: "list",
+                    message: "Select new role:",
+                    name: "role",
+                    choices: roles
                 }
-            })
+            ]).then(function(data) {
+                //SQL UPDATE query to update role of selected employee
+                connection.query("UPDATE employee SET role_id = (SELECT id FROM role WHERE title = ?) WHERE concat(first_name,' ', last_name) = ?" ,[data.role, data.emp], function(err, result) {
+                    if(err) throw err;
+                    console.log(`\n ${result.affectedRows} Employee updated successfully!\n`);
+                    start();
+                });
+            });
         });
     });
 }
