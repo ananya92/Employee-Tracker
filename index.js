@@ -3,14 +3,18 @@ const mysql = require(`mysql`);
 const inquirer = require(`inquirer`);
 
 const selectQuery = `SELECT e1.id AS Employee_ID, e1.first_name AS First_Name, e1.last_name AS Last_Name, r.title AS Role, d.name AS Department, r.salary as Salary, concat(e2.first_name,' ', e2.last_name) AS Manager FROM employee e1 INNER JOIN role r ON e1.role_id = r.id INNER JOIN department d ON r.department_id = d.id LEFT JOIN employee e2 ON e1.manager_id = e2.id`;
-
 const selManagersQuery = `SELECT concat(e2.first_name,' ', e2.last_name) as manager FROM employee e1 JOIN employee e2 ON e1.manager_id = e2.id group by manager`;
 
 const insertEmpQuery1 = `INSERT into employee(first_name, last_name, role_id) values(?,?,(SELECT id FROM role WHERE title = ?))`;
 const insertEmpQuery2 = `INSERT into employee(first_name, last_name, role_id, manager_id) values(?,?,(SELECT id FROM role WHERE title = ?),?)`;
 const insertRoleQuery = `INSERT INTO role(title, salary, department_id) VALUES(?, ?, (SELECT id FROM department WHERE name = ?))`;
 
+const updateRoleQuery = `UPDATE employee SET role_id = (SELECT id FROM role WHERE title = ?) WHERE concat(first_name,' ', last_name) = ?`;
+const updateManagerQuery1 = `UPDATE employee SET manager_id = NULL WHERE concat(first_name,' ', last_name) = ?`;
+const updateManagerQuery2 = `UPDATE employee SET manager_id = (SELECT * FROM (SELECT e.id FROM employee e WHERE concat(e.first_name,' ', e.last_name) = ?) AS x) WHERE concat(first_name,' ', last_name) = ?`;
+
 require('events').EventEmitter.defaultMaxListeners = 25;
+
 //Creating MYSQL connection
 var connection = mysql.createConnection({
     host: "localhost",
@@ -67,6 +71,7 @@ function start() {
                 updateEmpRole();
                 break;
             case "Update Employee Manager":
+                updateEmpManager();
                 break;
             case "View all Roles":
                 break;
@@ -463,12 +468,58 @@ function updateEmpRole() {
                 }
             ]).then(function(data) {
                 //SQL UPDATE query to update role of selected employee
-                connection.query("UPDATE employee SET role_id = (SELECT id FROM role WHERE title = ?) WHERE concat(first_name,' ', last_name) = ?" ,[data.role, data.emp], function(err, result) {
+                connection.query(updateRoleQuery ,[data.role, data.emp], function(err, result) {
                     if(err) throw err;
                     console.log(`\n ${result.affectedRows} Employee updated successfully!\n`);
                     start();
                 });
             });
+        });
+    });
+}
+
+//Function to update the manager of an employee
+function updateEmpManager() {
+    //SQL query to fetch all employee names
+    connection.query(`SELECT concat(first_name,' ', last_name) as name FROM employee`, function(err, result) {
+        if(err) throw err;
+        var names1=[], names2=[];
+        names2.push("None");
+        result.forEach(element => {
+            names1.push(element.name);
+            names2.push(element.name);
+        });
+        //Giving choice to user to select employee who's role they want to update
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "Select employee:",
+                name: "emp",
+                choices: names1
+            },
+            {
+                type: "list",
+                message: "Select new manager:",
+                name: "manager",
+                choices: names2
+            }
+        ]).then(function(data) {
+            if(data.manager == "None") {
+                //User opted to remove the manager of the selected employee
+                connection.query(updateManagerQuery1 ,[data.emp], function(err, result) {
+                    if(err) throw err;
+                    console.log(`\n ${result.affectedRows} Employee updated successfully!\n`);
+                    start();
+                });
+            }
+            else {
+                //User selected new manager for the selected employee
+                connection.query(updateManagerQuery2 ,[data.manager, data.emp], function(err, result) {
+                    if(err) throw err;
+                    console.log(`\n ${result.affectedRows} Employee updated successfully!\n`);
+                    start();
+                });
+            }
         });
     });
 }
