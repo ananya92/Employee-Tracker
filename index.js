@@ -5,6 +5,8 @@ const inquirer = require(`inquirer`);
 const selectQuery = `SELECT e1.id AS Employee_ID, e1.first_name AS First_Name, e1.last_name AS Last_Name, r.title AS Role, d.name AS Department, r.salary as Salary, concat(e2.first_name,' ', e2.last_name) AS Manager FROM employee e1 INNER JOIN role r ON e1.role_id = r.id INNER JOIN department d ON r.department_id = d.id LEFT JOIN employee e2 ON e1.manager_id = e2.id`;
 const selManagersQuery = `SELECT concat(e2.first_name,' ', e2.last_name) as manager FROM employee e1 JOIN employee e2 ON e1.manager_id = e2.id group by manager`;
 const selectRolesQuery = `SELECT r.id AS Role_ID, r.title as Title, r.salary as CTC, d.name AS Department FROM role r INNER JOIN department d ON r.department_id = d.id ORDER BY r.id`;
+const selectDepQuery = `SELECT id AS Department_ID, name AS Department_Name FROM department`;
+
 const insertEmpQuery1 = `INSERT into employee(first_name, last_name, role_id) values(?,?,(SELECT id FROM role WHERE title = ?))`;
 const insertEmpQuery2 = `INSERT into employee(first_name, last_name, role_id, manager_id) values(?,?,(SELECT id FROM role WHERE title = ?),?)`;
 const insertRoleQuery = `INSERT INTO role(title, salary, department_id) VALUES(?, ?, (SELECT id FROM department WHERE name = ?))`;
@@ -531,6 +533,16 @@ function updateEmpManager() {
     connection.query(selectRolesQuery, function(err, result) {
         if(err) throw err;
         console.table("\nPrinting all roles:", result);
+        //Calling the Exit Menu
+        return start();
+    });
+}
+
+ //Function to view information about all departments
+ function viewAllDepartments() {
+    connection.query(selectDepQuery, function(err, result) {
+        if(err) throw err;
+        console.table("\nPrinting all departments:", result);
         //Calling the Exit Menu
         return start();
     });
