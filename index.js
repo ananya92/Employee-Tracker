@@ -336,7 +336,7 @@ function removeEmployee() {
         result.forEach(element => {
             employees.push(element.name);
         });
-        //Reading new department's details
+        //Giving choice to user to select employee to delete
         return inquirer.prompt([
             {
                 type: "list",
@@ -345,13 +345,55 @@ function removeEmployee() {
                 choices: employees
             }
         ]).then(function(data) {
-            //SQL INSERT query to add new department
+            //SQL DELETE query to delete selected employee
             var nameArr = data.choice.split(" ");
-            connection.query("DELETE FROM employee WHERE ? = first_name && ? = last_name" ,[nameArr[0], nameArr[1]], function(err, result) {
+            connection.query("DELETE FROM employee WHERE first_name = ? && last_name = ?" ,[nameArr[0], nameArr[1]], function(err, result) {
                 if(err) throw err;
                 console.log(`\n ${result.affectedRows} Employee deleted successfully!\n`);
                 start();
             });
+        });
+    });
+}
+
+//Function to remove role
+function removeRole() {
+    //SQL query to fetch all roles
+    connection.query("SELECT title FROM role", function(err, result) {
+        if(err) throw err;
+        var roles = [];
+        result.forEach(element => {
+            roles.push(element.title);
+        });
+        //Giving choice to user to select role to delete
+        return inquirer.prompt([
+            {
+                type: "list",
+                message: "Select role to remove:",
+                name: "choice",
+                choices: roles
+            }
+        ]).then(function(data) {
+            //Confirming deletion of role as it would delete all employees of that role as well
+            inquirer.prompt([{
+                type: "confirm",
+                message: `Deleting ${data.choice} role will also remove all employees in this role. Do you want to proceed?`,
+                name: "confirm"
+            }]).then(function(data2) {
+                if(data2.confirm) {
+                    //SQL DELETE query to delete all employees in the selected role from employee table
+                    connection.query("DELETE FROM employee WHERE role_id = (SELECT id from role where title = ?)" ,[data.choice], function(err, result1) {
+                        if(err) throw err;
+                        console.log(`\n ${result1.affectedRows} Employee deleted successfully!\n`);
+                        //SQL DELETE query to delete the selected role from role table
+                        connection.query("DELETE FROM role WHERE title = ?" ,[data.choice], function(err, result2) {
+                            if(err) throw err;
+                            console.log(`\n ${result2.affectedRows} Role deleted successfully!\n`);
+                            start();
+                        });
+                    });
+                }
+            })
         });
     });
 }
