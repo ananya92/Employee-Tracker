@@ -15,6 +15,9 @@ const updateRoleQuery = `UPDATE employee SET role_id = (SELECT id FROM role WHER
 const updateManagerQuery1 = `UPDATE employee SET manager_id = NULL WHERE concat(first_name,' ', last_name) = ?`;
 const updateManagerQuery2 = `UPDATE employee SET manager_id = (SELECT * FROM (SELECT e.id FROM employee e WHERE concat(e.first_name,' ', e.last_name) = ?) AS x) WHERE concat(first_name,' ', last_name) = ?`;
 
+const budgetQuery = `SELECT d.name AS Department_Name, sum(r.salary) AS Budget FROM employee e INNER JOIN role r ON e.role_id = r.id inner join department d on d.id = r.department_id group by d.name`
+
+//increasing the maximum warning limit for number of event listeners
 require('events').EventEmitter.defaultMaxListeners = 25;
 
 //Creating MYSQL connection
@@ -82,6 +85,7 @@ function start() {
                 viewAllDepartments();
                 break;
             case "View department budget":
+                viewDepartmentBudget();
                 break;
             case "Exit":
             default: 
@@ -543,6 +547,16 @@ function updateEmpManager() {
     connection.query(selectDepQuery, function(err, result) {
         if(err) throw err;
         console.table("\nPrinting all departments:", result);
+        //Calling the Exit Menu
+        return start();
+    });
+}
+
+//View the total utilized budget of a department -- ie the combined salaries of all employees in that department
+function viewDepartmentBudget() {
+    connection.query(budgetQuery, function(err, result) {
+        if(err) throw err;
+        console.table("\nPrinting the budget utilized by each departments:", result);
         //Calling the Exit Menu
         return start();
     });
